@@ -1,7 +1,7 @@
 resource "aws_budgets_budget" "cost_control" {
   name              = "cloud-lab-budget"
   budget_type       = "COST"
-  limit_amount      = "5"
+  limit_amount      = var.budget_limit_usd
   limit_unit        = "USD"
   time_unit         = "MONTHLY"
 
@@ -10,6 +10,6 @@ resource "aws_budgets_budget" "cost_control" {
     threshold                  = 80
     threshold_type             = "PERCENTAGE"
     notification_type          = "ACTUAL"
-    subscriber_email_addresses = ["puzyrchenkooleksandr@gmail.com"]
+    subscriber_email_addresses = [var.budget_email]
   }
 }

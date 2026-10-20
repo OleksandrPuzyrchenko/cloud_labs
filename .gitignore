@@ -5,4 +5,6 @@ app/terraform/*.tfstate
 app/terraform/*.tfstate.*
 app/terraform/*.tfvars
 app/terraform/.terraform.lock.hcl
+app/.env
+*.pkg
 .DS_Store

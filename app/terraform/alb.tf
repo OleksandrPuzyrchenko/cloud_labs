@@ -50,7 +50,3 @@ resource "aws_lb_listener" "http" {
     target_group_arn = aws_lb_target_group.api.arn
   }
 }
-
-output "alb_url" {
-  value = aws_lb.main.dns_name
-}
