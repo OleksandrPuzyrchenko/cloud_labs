@@ -6,8 +6,11 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const app = express();
 app.use(express.json());
 
+const isAwsRds = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('amazonaws.com');
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  ssl: isAwsRds ? { rejectUnauthorized: false } : false,
 });
 
 pool.query(`
@@ -16,7 +19,9 @@ pool.query(`
     title TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT NOW()
   )
-`).catch(err => console.error("DB Init Error:", err));
+`)
+  .then(() => console.log("Database connected & 'notes' table ready"))
+  .catch(err => console.error("DB Init Error:", err));
 
 const swaggerOptions = {
   swaggerDefinition: {
