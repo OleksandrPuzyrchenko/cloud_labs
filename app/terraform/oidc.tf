@@ -20,7 +20,7 @@ resource "aws_iam_role" "github_actions_role" {
           StringLike = {
             "token.actions.githubusercontent.com:sub" : [
               "repo:${var.github_repo}:*",
-              "repo:OleksandrPuzyrchenko*/cloud_labs*:*"
+              "repo:OleksandrPuzyrchenko/cloud_labs*:*"
             ]
           }
           StringEquals = {
