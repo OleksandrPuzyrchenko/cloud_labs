@@ -123,6 +123,35 @@ app.post('/api/notes', async (req, res) => {
 /**
  * @swagger
  * /api/notes/{id}:
+ *   get:
+ *     summary: Get a note by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: The note
+ *       404:
+ *         description: Note not found
+ */
+app.get('/api/notes/:id', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM notes WHERE id = $1', [req.params.id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Note not found" });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/notes/{id}:
  *   delete:
  *     summary: Delete a note by ID
  *     parameters:
