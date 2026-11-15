@@ -1,5 +1,6 @@
 const express = require('express');
 const { Pool } = require('pg');
+const { createClient } = require('redis');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 
@@ -22,6 +23,15 @@ pool.query(`
 `)
   .then(() => console.log("Database connected & 'notes' table ready"))
   .catch(err => console.error("DB Init Error:", err));
+
+const NOTES_CACHE_KEY = 'notes:list';
+const CACHE_TTL_SECONDS = parseInt(process.env.CACHE_TTL_SECONDS || '30');
+let redis = null;
+if (process.env.CACHE_ENABLED === 'true' && process.env.REDIS_URL) {
+  redis = createClient({ url: process.env.REDIS_URL });
+  redis.on('error', (e) => console.error('Redis error:', e.message));
+  redis.connect().then(() => console.log('Redis connected')).catch((e) => console.error('Redis connect failed:', e.message));
+}
 
 const swaggerOptions = {
   swaggerDefinition: {
@@ -75,7 +85,26 @@ app.get('/api/simulate-error', (req, res) => {
  */
 app.get('/api/notes', async (req, res) => {
   try {
+    if (redis && redis.isReady) {
+      try {
+        const cached = await redis.get(NOTES_CACHE_KEY);
+        if (cached) {
+          res.set('X-Cache', 'HIT');
+          return res.type('application/json').send(cached);
+        }
+      } catch (e) {
+        console.error('Redis get error:', e.message);
+      }
+    }
     const result = await pool.query('SELECT * FROM notes ORDER BY id DESC');
+    if (redis && redis.isReady) {
+      try {
+        await redis.set(NOTES_CACHE_KEY, JSON.stringify(result.rows), { EX: CACHE_TTL_SECONDS });
+      } catch (e) {
+        console.error('Redis set error:', e.message);
+      }
+    }
+    res.set('X-Cache', 'MISS');
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });

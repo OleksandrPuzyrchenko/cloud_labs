@@ -66,10 +66,24 @@ resource "aws_ecs_task_definition" "api" {
     hostPort      = 3000
     protocol      = "tcp"
   }]
-    environment = [{
-      name  = "DATABASE_URL"
-      value = "postgres://${aws_db_instance.postgres.username}:${aws_db_instance.postgres.password}@${aws_db_instance.postgres.endpoint}/${aws_db_instance.postgres.db_name}"
-    }]
+    environment = [
+      {
+        name  = "DATABASE_URL"
+        value = "postgres://${aws_db_instance.postgres.username}:${aws_db_instance.postgres.password}@${aws_db_instance.postgres.endpoint}/${aws_db_instance.postgres.db_name}"
+      },
+      {
+        name  = "REDIS_URL"
+        value = "redis://${aws_elasticache_cluster.redis.cache_nodes[0].address}:6379"
+      },
+      {
+        name  = "CACHE_ENABLED"
+        value = tostring(var.cache_enabled)
+      },
+      {
+        name  = "CACHE_TTL_SECONDS"
+        value = "30"
+      }
+    ]
     logConfiguration = {
       logDriver = "awslogs"
       options = {
