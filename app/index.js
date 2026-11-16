@@ -33,6 +33,47 @@ if (process.env.CACHE_ENABLED === 'true' && process.env.REDIS_URL) {
   redis.connect().then(() => console.log('Redis connected')).catch((e) => console.error('Redis connect failed:', e.message));
 }
 
+const IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60;
+let idemRedis = redis;
+if (!idemRedis && process.env.REDIS_URL) {
+  idemRedis = createClient({ url: process.env.REDIS_URL });
+  idemRedis.on('error', (e) => console.error('Redis (idempotency) error:', e.message));
+  idemRedis.connect().catch((e) => console.error('Redis (idempotency) connect failed:', e.message));
+}
+
+async function idempotency(req, res, next) {
+  const key = req.get('Idempotency-Key');
+  if (!key) return next();
+  if (!idemRedis || !idemRedis.isReady) {
+    return res.status(503).json({ error: 'Idempotency store unavailable' });
+  }
+  const rkey = `idem:${key}`;
+  try {
+    const first = await idemRedis.set(rkey, JSON.stringify({ state: 'processing' }), { NX: true, EX: IDEMPOTENCY_TTL_SECONDS });
+    if (!first) {
+      const raw = await idemRedis.get(rkey);
+      const stored = raw ? JSON.parse(raw) : null;
+      if (!stored || stored.state === 'processing') {
+        return res.status(409).json({ error: 'Request with this Idempotency-Key is still being processed' });
+      }
+      res.set('Idempotent-Replayed', 'true');
+      return res.status(stored.status).json(stored.body);
+    }
+    const originalJson = res.json.bind(res);
+    res.json = (body) => {
+      const save = res.statusCode < 300
+        ? idemRedis.set(rkey, JSON.stringify({ state: 'done', status: res.statusCode, body }), { EX: IDEMPOTENCY_TTL_SECONDS })
+        : idemRedis.del(rkey);
+      save.catch((e) => console.error('Idempotency store error:', e.message)).finally(() => originalJson(body));
+      return res;
+    };
+    next();
+  } catch (e) {
+    console.error('Idempotency error:', e.message);
+    res.status(503).json({ error: 'Idempotency store unavailable' });
+  }
+}
+
 const swaggerOptions = {
   swaggerDefinition: {
     openapi: '3.0.0',
@@ -133,7 +174,7 @@ app.get('/api/notes', async (req, res) => {
  *       201:
  *         description: Note created successfully
  */
-app.post('/api/notes', async (req, res) => {
+app.post('/api/notes', idempotency, async (req, res) => {
   try {
     const { title } = req.body;
     if (!title) {
