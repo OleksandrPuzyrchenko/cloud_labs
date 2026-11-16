@@ -19,3 +19,32 @@ Redis спільний для всіх екземплярів, тому ключ
 BASE_URL=http://<alb-dns> bash loadtest/idempotency-test.sh
 ```
 Результат:
+== Запит 1 ==
+HTTP/1.1 201 Created
+Date: Mon, 16 Nov 2026 15:14:09 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 104
+Connection: keep-alive
+X-Powered-By: Express
+ETag: W/"68-EtI/4u/E/XB9oemsRlBhBV4qbiQ"
+
+{"id":14490,"title":"idem-E72C57E5-C0E9-456A-B961-A0AF85090CC7","created_at":"2026-11-16T15:14:09.893Z"}
+== Запит 2 (той самий ключ) ==
+HTTP/1.1 201 Created
+Date: Mon, 16 Nov 2026 15:14:09 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 104
+Connection: keep-alive
+X-Powered-By: Express
+Idempotent-Replayed: true
+ETag: W/"68-EtI/4u/E/XB9oemsRlBhBV4qbiQ"
+
+{"id":14490,"title":"idem-E72C57E5-C0E9-456A-B961-A0AF85090CC7","created_at":"2026-11-16T15:14:09.893Z"}
+== Тіла відповідей ==
+1: {"id":14490,"title":"idem-E72C57E5-C0E9-456A-B961-A0AF85090CC7","created_at":"2026-11-16T15:14:09.893Z"}
+2: {"id":14490,"title":"idem-E72C57E5-C0E9-456A-B961-A0AF85090CC7","created_at":"2026-11-16T15:14:09.893Z"}
+OK: відповіді однакові
+
+== Кількість записів із цим заголовком у базі ==
+Записів: 1
+OK: рівно один запис
