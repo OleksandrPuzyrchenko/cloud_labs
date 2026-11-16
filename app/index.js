@@ -104,7 +104,7 @@ app.get('/api/notes', async (req, res) => {
         console.error('Redis set error:', e.message);
       }
     }
-    res.set('X-Cache', 'MISS');
+    if (redis) res.set('X-Cache', 'MISS');
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
