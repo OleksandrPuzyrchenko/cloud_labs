@@ -1,7 +1,7 @@
 variable "cache_enabled" {
   description = "Чи використовує застосунок Redis-кеш для GET /api/notes"
   type        = bool
-  default     = true
+  default     = false
 }
 
 resource "aws_elasticache_subnet_group" "redis" {
